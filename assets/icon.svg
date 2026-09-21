@@ -1,0 +1,72 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="CrispCast">
+  <title>CrispCast</title>
+  <defs>
+    <!-- Tile background: graphite to deep charcoal, diagonal -->
+    <linearGradient id="tile" x1="0" y1="0" x2="1024" y2="1024" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#2E3340"/>
+      <stop offset="0.55" stop-color="#1B1E28"/>
+      <stop offset="1" stop-color="#0E1017"/>
+    </linearGradient>
+    <!-- Top sheen for the glassy Big Sur edge -->
+    <linearGradient id="sheen" x1="512" y1="0" x2="512" y2="560" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.16"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+    <!-- Blue accent glow behind the mark -->
+    <radialGradient id="glow" cx="512" cy="500" r="380" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#4d8bff" stop-opacity="0.55"/>
+      <stop offset="0.6" stop-color="#4d8bff" stop-opacity="0.14"/>
+      <stop offset="1" stop-color="#4d8bff" stop-opacity="0"/>
+    </radialGradient>
+    <!-- Frame stroke: vivid blue to cyan -->
+    <linearGradient id="frame" x1="212" y1="320" x2="812" y2="740" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#8ab6ff"/>
+      <stop offset="0.5" stop-color="#4d8bff"/>
+      <stop offset="1" stop-color="#2f6bff"/>
+    </linearGradient>
+    <!-- Waveform bars: white to blue, vertical -->
+    <linearGradient id="wave" x1="512" y1="360" x2="512" y2="700" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="1" stop-color="#b9d3ff"/>
+    </linearGradient>
+    <!-- Record dot: red -->
+    <radialGradient id="rec" cx="504" cy="236" r="58" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ff8082"/>
+      <stop offset="0.45" stop-color="#ff4d4f"/>
+      <stop offset="1" stop-color="#e0272a"/>
+    </radialGradient>
+    <filter id="soft" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="14"/>
+    </filter>
+  </defs>
+
+  <!-- Tile -->
+  <rect x="0" y="0" width="1024" height="1024" rx="225" ry="225" fill="url(#tile)"/>
+  <rect x="0" y="0" width="1024" height="1024" rx="225" ry="225" fill="url(#sheen)"/>
+  <!-- Inner hairline for depth -->
+  <rect x="8" y="8" width="1008" height="1008" rx="218" ry="218" fill="none" stroke="#ffffff" stroke-opacity="0.10" stroke-width="4"/>
+
+  <!-- Accent glow -->
+  <circle cx="512" cy="512" r="360" fill="url(#glow)"/>
+
+  <!-- Screen / video frame -->
+  <rect x="212" y="320" width="600" height="420" rx="60" ry="60"
+        fill="#ffffff" fill-opacity="0.05"
+        stroke="url(#frame)" stroke-width="40"/>
+
+  <!-- Audio waveform (clean voice), centered at y=530 -->
+  <g fill="url(#wave)">
+    <rect x="259" y="480" width="38" height="100" rx="19"/>
+    <rect x="337" y="445" width="38" height="170" rx="19"/>
+    <rect x="415" y="410" width="38" height="240" rx="19"/>
+    <rect x="493" y="380" width="38" height="300" rx="19"/>
+    <rect x="571" y="410" width="38" height="240" rx="19"/>
+    <rect x="649" y="445" width="38" height="170" rx="19"/>
+    <rect x="727" y="480" width="38" height="100" rx="19"/>
+  </g>
+
+  <!-- Record light (floats above the screen) -->
+  <circle cx="504" cy="236" r="60" fill="#ff4d4f" opacity="0.5" filter="url(#soft)"/>
+  <circle cx="504" cy="236" r="46" fill="url(#rec)"/>
+  <circle cx="490" cy="222" r="14" fill="#ffffff" fill-opacity="0.55"/>
+</svg>
