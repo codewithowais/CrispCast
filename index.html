@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Clean Screen Recorder</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <img class="applogo" id="applogo" alt="" />
+      <span class="dot"></span>
+      <h1>CrispCast</h1>
+    </div>
+    <div class="perms" id="perms"></div>
+  </header>
+
+  <main>
+    <!-- 1. Source -->
+    <section class="panel">
+      <div class="panel-head">
+        <h2>1 · Choose what to record</h2>
+        <button class="ghost" id="refreshSources">Refresh</button>
+      </div>
+      <div class="sources" id="sources"></div>
+    </section>
+
+    <!-- 2. Audio + quality -->
+    <section class="panel two-col">
+      <div>
+        <h2>2 · Audio</h2>
+        <label class="row">
+          <span>Microphone</span>
+          <select id="micSelect"></select>
+        </label>
+        <label class="toggle">
+          <input type="checkbox" id="micEnabled" checked />
+          <span>Record microphone (saved as a separate clean voice file)</span>
+        </label>
+        <label class="toggle">
+          <input type="checkbox" id="systemAudio" checked />
+          <span>Record system / computer audio</span>
+        </label>
+        <p class="hint">Mic is captured <strong>raw</strong> — no noise suppression or gain applied — so you can clean it yourself later.</p>
+      </div>
+      <div>
+        <h2>3 · Quality</h2>
+        <label class="row">
+          <span>Video quality</span>
+          <select id="quality">
+            <option value="high">High · ~10 Mbps</option>
+            <option value="ultra" selected>Ultra · ~24 Mbps (native res)</option>
+            <option value="max">Max · ~40 Mbps</option>
+          </select>
+        </label>
+        <label class="row">
+          <span>Frame rate</span>
+          <select id="fps">
+            <option value="30" selected>30 fps</option>
+            <option value="60">60 fps</option>
+          </select>
+        </label>
+        <p class="hint">Video records at the source's native resolution. Higher bitrate = sharper image.</p>
+      </div>
+    </section>
+
+    <!-- Preview + controls -->
+    <section class="panel">
+      <div class="panel-head">
+        <h2>Preview</h2>
+        <span class="timer" id="timer">00:00</span>
+      </div>
+      <div class="preview-wrap">
+        <video id="preview" muted autoplay playsinline></video>
+        <div class="preview-empty" id="previewEmpty">
+          <span>Live preview appears here while recording</span>
+        </div>
+      </div>
+
+      <div class="savebar">
+        <span class="savebar-label">Save to</span>
+        <span class="savebar-path" id="saveDir" title="">…</span>
+        <button class="ghost small" id="changeDirBtn">Change…</button>
+      </div>
+
+      <div class="controls">
+        <button id="startBtn" class="primary">● Start recording</button>
+        <button id="stopBtn" class="stop" disabled>■ Stop</button>
+        <button id="folderBtn" class="ghost">Open folder</button>
+      </div>
+      <div id="status" class="status"></div>
+      <div id="results" class="results"></div>
+    </section>
+  </main>
+
+  <script src="renderer.js"></script>
+</body>
+</html>
