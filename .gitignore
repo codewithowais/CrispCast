@@ -1,0 +1,23 @@
+# Dependencies (includes the large bundled ffmpeg/ffprobe binaries)
+node_modules/
+
+# Build output
+dist/
+out/
+*.dmg
+*.zip
+*.exe
+*.AppImage
+*.deb
+*.blockmap
+
+# Recorded output / local settings
+recordings/
+settings.json
+
+# OS / editor cruft
+.DS_Store
+Thumbs.db
+*.log
+.vscode/
+.idea/
