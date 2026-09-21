@@ -1,6 +1,6 @@
 {
   "name": "clean-screen-recorder",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "macOS screen recorder with high-res video and clean, isolated voice + system audio tracks",
   "main": "main.js",
   "productName": "CrispCast",
@@ -10,7 +10,7 @@
     "dist": "electron-builder",
     "release": "electron-builder --publish always"
   },
-  "author": "owais.ahmed@fps.edu.pk",
+  "author": "codewithowais",
   "license": "MIT",
   "devDependencies": {
     "electron": "^34.2.0",
@@ -26,7 +26,8 @@
     "publish": {
       "provider": "github",
       "owner": "codewithowais",
-      "repo": "CrispCast"
+      "repo": "CrispCast",
+      "releaseType": "release"
     },
     "asar": true,
     "asarUnpack": [

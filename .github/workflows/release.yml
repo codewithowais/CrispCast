@@ -19,7 +19,9 @@ jobs:
       # Keep building the other OSes even if one fails.
       fail-fast: false
       matrix:
-        os: [macos-latest, windows-latest, ubuntu-latest]
+        # ubuntu-22.04 (not ubuntu-latest/24.04): reliable AppImage/deb builds
+        # and libfuse2 availability for electron-builder.
+        os: [macos-latest, windows-latest, ubuntu-22.04]
 
     runs-on: ${{ matrix.os }}
 
@@ -31,6 +33,11 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
+
+      # AppImage/deb build deps that aren't preinstalled on the runner.
+      - name: Install Linux build dependencies
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y libfuse2 libarchive-tools
 
       # `npm install` (not `npm ci`) so ffmpeg-static / ffprobe-static fetch the
       # correct per-OS binaries on each runner, and to tolerate minor lockfile drift.
