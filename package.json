@@ -1,6 +1,6 @@
 {
   "name": "clean-screen-recorder",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "macOS screen recorder with high-res video and clean, isolated voice + system audio tracks",
   "main": "main.js",
   "productName": "CrispCast",
