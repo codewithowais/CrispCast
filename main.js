@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, desktopCapturer, session, systemPreferences, shell, dialog } = require('electron');
+const { app, BrowserWindow, ipcMain, desktopCapturer, session, systemPreferences, shell, dialog, Menu } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const { spawn } = require('child_process');
@@ -130,6 +130,33 @@ app.whenReady().then(() => {
       if (fs.existsSync(iconPng)) app.dock.setIcon(iconPng);
     } catch (_) {}
   }
+  // Show "CrispCast" in the macOS menu bar + About panel (in a packaged build
+  // the app bundle already provides this; this covers the `npm start` dev run).
+  app.setAboutPanelOptions({
+    applicationName: 'CrispCast',
+    applicationVersion: app.getVersion(),
+    credits: 'Crisp screen, clean voice.'
+  });
+  if (process.platform === 'darwin') {
+    Menu.setApplicationMenu(Menu.buildFromTemplate([
+      {
+        label: 'CrispCast',
+        submenu: [
+          { role: 'about' },
+          { type: 'separator' },
+          { role: 'hide' },
+          { role: 'hideOthers' },
+          { role: 'unhide' },
+          { type: 'separator' },
+          { role: 'quit' }
+        ]
+      },
+      { role: 'editMenu' },
+      { role: 'viewMenu' },
+      { role: 'windowMenu' }
+    ]));
+  }
+
   createWindow();
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
