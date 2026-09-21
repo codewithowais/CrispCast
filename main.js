@@ -99,6 +99,13 @@ function createWindow() {
   // Grant screen capture + (optionally) system-audio loopback when the renderer
   // calls navigator.mediaDevices.getDisplayMedia(). On macOS this is backed by
   // ScreenCaptureKit, so `audio: 'loopback'` captures real system audio.
+  //
+  // We render our own in-app source grid on every platform and honor the source
+  // the user picks (useSystemPicker: false). Windows/Linux list all windows this
+  // way; macOS 14+ restricts enumeration to the screen + windows on the current
+  // desktop (an OS privacy rule), so the UI tells macOS users to focus a window
+  // and Refresh to capture others. On macOS this path also captures system-audio
+  // loopback (verified).
   session.defaultSession.setDisplayMediaRequestHandler(
     (request, callback) => {
       desktopCapturer
@@ -113,7 +120,6 @@ function createWindow() {
         })
         .catch(() => callback({}));
     },
-    // We render our own source picker in the UI, so skip the native picker.
     { useSystemPicker: false }
   );
 

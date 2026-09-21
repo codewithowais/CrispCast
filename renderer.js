@@ -16,6 +16,7 @@ let allSources = [];
 let idlePreviewTimer = null;
 let isRecording = false;
 let progressCb = null; // routed target for ffmpeg 'remux-progress' events
+let isMac = false;
 
 const QUALITY_BITRATE = {
   high: 10_000_000,
@@ -42,6 +43,7 @@ function setStatus(msg, kind = '') {
 // ---------- permissions ----------
 async function refreshPermissions() {
   const p = await window.recorder.getPermissions();
+  isMac = p.platform === 'darwin';
   const permsEl = el('perms');
   const chip = (label, state) =>
     `<span class="chip ${state === 'granted' ? 'ok' : 'bad'}" data-perm="${label}">${label}: ${state}</span>`;
@@ -131,6 +133,18 @@ async function loadSources() {
   if (firstScreen) {
     const node = sourcesEl.querySelector(`[data-id="${CSS.escape(firstScreen.id)}"]`);
     selectSource(firstScreen.id, node);
+  }
+
+  // macOS only exposes the screen + windows on the current desktop (an OS
+  // privacy limit). Tell users how to capture a window that isn't listed.
+  if (isMac) {
+    const tip = el('sourcesTip');
+    if (tip) {
+      tip.textContent =
+        'macOS lists Entire Screen plus windows on your current desktop. ' +
+        'To record another window, click it to bring it to the front, then press Refresh.';
+      tip.style.display = 'block';
+    }
   }
 }
 

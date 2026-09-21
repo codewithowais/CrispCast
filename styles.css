@@ -189,6 +189,12 @@ select.mini {
   border-radius: 6px; color: var(--text);
 }
 
+.picker-note {
+  border: 1px dashed var(--border); border-radius: 10px; padding: 14px 16px;
+  background: var(--panel-2);
+}
+.picker-note-title { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 6px; }
+
 .sources-head {
   margin-top: 6px; font-size: 10px; text-transform: uppercase; letter-spacing: 0.6px;
   color: var(--muted); opacity: 0.7;
