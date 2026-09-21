@@ -21,6 +21,17 @@ const SELFTEST = process.argv.includes('--selftest');
 // Set the app name early (affects the macOS menu bar and dock label in dev).
 app.setName('CrispCast');
 
+// Enable the ScreenCaptureKit system picker on macOS. Without these Chromium
+// feature flags, setDisplayMediaRequestHandler's `useSystemPicker: true` silently
+// does nothing. With them, macOS shows its native picker listing EVERY window
+// across ALL desktops/Spaces (the only way an app can reach off-desktop windows).
+if (process.platform === 'darwin') {
+  app.commandLine.appendSwitch(
+    'enable-features',
+    'ScreenCaptureKitMac,ScreenCaptureKitStreamPickerSonoma'
+  );
+}
+
 let mainWindow;
 
 // The source the renderer picked, read by the display-media request handler below.
@@ -100,12 +111,12 @@ function createWindow() {
   // calls navigator.mediaDevices.getDisplayMedia(). On macOS this is backed by
   // ScreenCaptureKit, so `audio: 'loopback'` captures real system audio.
   //
-  // We render our own in-app source grid on every platform and honor the source
-  // the user picks (useSystemPicker: false). Windows/Linux list all windows this
-  // way; macOS 14+ restricts enumeration to the screen + windows on the current
-  // desktop (an OS privacy rule), so the UI tells macOS users to focus a window
-  // and Refresh to capture others. On macOS this path also captures system-audio
-  // loopback (verified).
+  // Source selection:
+  //  • macOS: useSystemPicker: true → the native ScreenCaptureKit picker (enabled
+  //    by the feature flags above) lists every window across all desktops. This
+  //    handler is not invoked in that case; macOS drives selection + loopback.
+  //  • Windows/Linux: useSystemPicker is off; getSources lists all windows and we
+  //    honor the source chosen in our in-app grid, with `audio: 'loopback'`.
   session.defaultSession.setDisplayMediaRequestHandler(
     (request, callback) => {
       desktopCapturer
@@ -120,7 +131,7 @@ function createWindow() {
         })
         .catch(() => callback({}));
     },
-    { useSystemPicker: false }
+    { useSystemPicker: process.platform === 'darwin' }
   );
 
   mainWindow.loadFile(SELFTEST ? 'selftest.html' : 'index.html');

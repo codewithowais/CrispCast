@@ -68,6 +68,32 @@ async function refreshPermissions() {
 
 // ---------- sources ----------
 async function loadSources() {
+  // macOS: the OS forbids listing windows in-app, so use Apple's native picker
+  // (enabled via feature flags in main.js). It lists every window across ALL
+  // desktops. Selection happens in that picker when the user presses Start.
+  if (isMac) {
+    sourcesEl.innerHTML = '';
+    const box = document.createElement('div');
+    box.className = 'picker-note';
+    box.style.gridColumn = '1 / -1';
+    const h = document.createElement('div');
+    h.className = 'picker-note-title';
+    h.textContent = 'Press ● Start recording, then choose your source';
+    const p = document.createElement('div');
+    p.className = 'hint';
+    p.innerHTML =
+      "macOS opens its own recorder picker listing <strong>every window across all " +
+      "your desktops</strong>, plus <strong>Entire Screen</strong> — pick one there and " +
+      "recording begins.<br><br>" +
+      "Apple requires this: for privacy, apps can’t list your windows in their own " +
+      "UI, so the full list lives in that system picker.";
+    box.append(h, p);
+    sourcesEl.appendChild(box);
+    const emptyEl = el('previewEmpty');
+    if (emptyEl) emptyEl.querySelector('span').textContent =
+      'Your recording preview appears here once you start';
+    return;
+  }
   sourcesEl.innerHTML = '<p class="hint">Loading sources…</p>';
   let sources;
   try {
@@ -175,6 +201,7 @@ function showIdlePreview() {
 // Periodically refresh the snapshot so the preview tracks the screen — without
 // opening a capture stream (so macOS shows no "recording" indicator while idle).
 function startIdlePreviewLoop() {
+  if (isMac) return; // macOS uses the system picker; no in-app thumbnails
   stopIdlePreviewLoop();
   idlePreviewTimer = setInterval(async () => {
     if (isRecording || !selectedSourceId || !document.hasFocus()) return;
@@ -220,7 +247,9 @@ function pickVideoMime() {
 }
 
 async function startRecording() {
-  if (!selectedSourceId) {
+  // On macOS the native picker chooses the source at capture time; on
+  // Windows/Linux we require a pick from the in-app grid.
+  if (!isMac && !selectedSourceId) {
     setStatus('Pick a screen or window to record first.', 'err');
     return;
   }
