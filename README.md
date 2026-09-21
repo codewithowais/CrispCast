@@ -1,71 +1,106 @@
+![CrispCast](assets/banner.png)
+
+<p align="center">
+  <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/License-MIT-4d8bff.svg"></a>
+  <img alt="Platforms" src="https://img.shields.io/badge/Platforms-macOS%20%7C%20Windows%20%7C%20Linux-2E3340.svg">
+  <img alt="Built with Electron" src="https://img.shields.io/badge/Built%20with-Electron-47848F.svg?logo=electron&logoColor=white">
+  <a href="https://github.com/codewithowais/CrispCast/releases/latest"><img alt="Download" src="https://img.shields.io/badge/Download-Latest%20release-ff4d4f.svg"></a>
+</p>
+
 # CrispCast
 
-*Crisp screen, clean voice.*
+A cross-platform desktop screen recorder that captures your screen in high
+resolution along with system audio and an **isolated, raw microphone track** —
+then denoises the voice and merges everything into a single clean H.264 MP4.
 
-A cross-platform desktop app (Electron) that records your **screen in high resolution** while capturing **system audio + your microphone** — with the mic saved as a **separate, raw voice track**, plus a one-click step to denoise the voice and export a merged MP4.
+> **Crisp screen, clean voice.**
 
-## Why a desktop app (not a web app)
-On macOS, browsers can't reliably capture **system/computer audio**. This app uses Electron 34+, which is backed by Apple's **ScreenCaptureKit**, so `audio: 'loopback'` captures real system audio natively — something the browser route can't do on a Mac.
+## Download
 
-## Platforms
-Works on **macOS** (fully), **Windows** (fully — system-audio loopback is WASAPI-backed), and **Linux** (screen + mic; system-audio loopback is unreliable — X11 preferred over Wayland). See [CROSS_PLATFORM.md](CROSS_PLATFORM.md) for the detailed per-OS breakdown.
+Grab a prebuilt installer from the
+**[Releases page](https://github.com/codewithowais/CrispCast/releases/latest)**:
 
-## What you get per recording
-Recordings save to a folder you choose (default: **`Movies/CrispCast`** on macOS, **`Videos/CrispCast`** on Windows/Linux). Change it any time via the **Save to → Change…** bar in the app.
+| Platform | File |
+|----------|------|
+| macOS | `.dmg` |
+| Windows | `.exe` |
+| Linux | `.AppImage` / `.deb` |
+
+> **Heads-up: builds are currently unsigned.** macOS Gatekeeper and Windows
+> SmartScreen will warn on first launch. To open anyway:
+> - **macOS** — right-click (or Control-click) the app and choose **Open**, then
+>   confirm. On newer macOS you may also need System Settings → Privacy &
+>   Security → **Open Anyway**.
+> - **Windows** — click **More info** on the SmartScreen prompt, then **Run
+>   anyway**.
+
+Prefer to build it yourself? See [Build from source](#build-from-source).
+
+## Features
+
+- **High-resolution screen video** captured at the source's native resolution.
+- **System-audio loopback** — records the actual computer output, not just the mic.
+- **Isolated raw microphone track** saved separately, with no noise suppression,
+  gain, or echo cancellation applied.
+- **One-click voice cleanup + merge** — auto-denoise the voice and mix it back
+  with the system audio into a single **H.264/AAC MP4** that plays everywhere.
+- **Optional compression** to 1080p or 720p for smaller shareable files.
+- **Choose your save folder** any time from the in-app *Save to → Change…* bar.
+- **Fully offline** — all audio processing runs locally through a bundled
+  `ffmpeg` (`ffmpeg-static`). No cloud, no account, no model download.
+
+### How the recording is structured
+
+Each recording keeps the voice on its own track so it's easy to denoise, then
+remux back onto the video:
 
 | File | Contents |
 |------|----------|
 | `recording-<timestamp>.webm` | Screen video (native resolution) + system audio |
-| `recording-<timestamp>-voice.webm` | Your microphone, **raw** — no noise suppression, gain, or echo cancellation |
-| `recording-<timestamp>-clean.mp4` | *(after clicking "Clean voice → MP4")* Final H.264/AAC video with the denoised voice mixed back in |
+| `recording-<timestamp>-voice.webm` | Your microphone, **raw** |
+| `recording-<timestamp>-clean.mp4` | *(after "Clean voice → MP4")* final H.264/AAC video with the denoised voice mixed in |
 
-Keeping the voice on its own track is deliberate: it's the easiest thing to run through noise removal, then remux back onto the video.
-
-## Clean voice & merge (built in)
-After a recording finishes, click **"Clean voice → MP4"**. The app (using a bundled `ffmpeg-static` binary — no install needed) runs an offline denoise chain on your raw mic track and mixes it back with the system audio, exporting a single MP4:
+The offline denoise chain is a straightforward ffmpeg filter — remove rumble,
+hiss and AC noise, then normalize loudness:
 
 ```
-highpass=f=80,afftdn,anlmdn,loudnorm   # remove rumble, hiss, AC noise; normalize loudness
+highpass=f=80,afftdn,anlmdn,loudnorm
 ```
 
-- No cloud, no model download — fully offline.
-- Output is **H.264 MP4** that plays everywhere (QuickTime, iMovie, web).
-- The original raw `.webm` files are kept, so you can always re-clean with different settings.
+The original raw `.webm` files are always kept, so you can re-clean with
+different settings later.
 
-To tune how aggressive the cleanup is, edit `VOICE_FILTER` in [`main.js`](main.js).
+## Preview
 
-## Setup
+<p align="center">
+  <img src="assets/icon.png" alt="CrispCast app icon" width="128">
+</p>
+
+![CrispCast banner](assets/banner.png)
+
+<!--
+  Maintainers: drop a real in-app screenshot here (e.g. assets/screenshot.png)
+  and reference it with:  ![CrispCast in action](assets/screenshot.png)
+-->
+
+## Build from source
+
 ```bash
 npm install
 npm start
 ```
 
-### Building installers
-```bash
-npm run pack    # unpacked app for the current OS (quick test)
-npm run dist    # full installers (.dmg/.zip, .exe, .AppImage/.deb)
-```
-Notes: `electron-builder` prefers Node ≥20 (this repo was scaffolded on Node 16 — upgrade before building). `ffmpeg-static` only downloads the *host* platform's binary, so build each OS on that OS (or a CI matrix). Details in [CROSS_PLATFORM.md](CROSS_PLATFORM.md).
+That's it to run the app in development. For building distributable installers
+and the full per-OS story (macOS Screen Recording permission, Windows WASAPI
+loopback, Linux X11/Wayland + PipeWire caveats, and ffmpeg packaging notes), see
+**[CROSS_PLATFORM.md](CROSS_PLATFORM.md)**.
 
-### First run (macOS) — grant Screen Recording permission
-macOS blocks screen capture until you allow it:
-1. In the app, click **Open Screen Recording settings** (or: System Settings → Privacy & Security → Screen Recording).
-2. Enable **Electron** (dev) / **CrispCast** (packaged).
-3. **Fully quit and relaunch** the app.
+## Contributing
 
-On **Windows/Linux** there's no such permission gate.
+Contributions are welcome! See **[CONTRIBUTING.md](CONTRIBUTING.md)** for how to
+set up, the project layout, running the self-test (`electron . --selftest`), and
+how to open issues and pull requests.
 
-The app also asks for **Microphone** permission on first launch.
+## License
 
-## Quality settings
-- **Video quality**: High (~10 Mbps) / Ultra (~24 Mbps) / Max (~40 Mbps). Capture is always at the source's native resolution; bitrate controls sharpness.
-- **Frame rate**: 30 or 60 fps.
-- **Audio**: system audio at 192 kbps Opus; mic at 256 kbps Opus (transparent for voice).
-
-## Verified on
-macOS 26 (Tahoe), Apple Silicon, Electron 34.5.8 — a self-test captured 3024×1964 @ 30fps with a working system-audio loopback track + separate mic track, then produced a clean H.264/AAC MP4.
-
-## Roadmap ideas
-- Optional RNNoise (`arnndn`) model for even stronger voice denoise
-- Countdown timer, pause/resume, region selection
-- Webcam overlay (picture-in-picture)
+Released under the [MIT License](LICENSE). © 2026 codewithowais.

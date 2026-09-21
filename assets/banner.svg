@@ -1,0 +1,90 @@
+<svg width="1280" height="400" viewBox="0 0 1280 400" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="CrispCast — Crisp screen, clean voice.">
+  <title>CrispCast — Crisp screen, clean voice.</title>
+  <defs>
+    <!-- Background: graphite to deep charcoal, diagonal -->
+    <linearGradient id="bg" x1="0" y1="0" x2="1280" y2="400" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#2E3340"/>
+      <stop offset="0.55" stop-color="#1B1E28"/>
+      <stop offset="1" stop-color="#0E1017"/>
+    </linearGradient>
+    <!-- Top sheen -->
+    <linearGradient id="sheen" x1="640" y1="0" x2="640" y2="240" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.10"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+    <!-- Blue accent glow behind the mark -->
+    <radialGradient id="glow" cx="300" cy="200" r="320" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#4d8bff" stop-opacity="0.45"/>
+      <stop offset="0.6" stop-color="#4d8bff" stop-opacity="0.12"/>
+      <stop offset="1" stop-color="#4d8bff" stop-opacity="0"/>
+    </radialGradient>
+    <!-- Frame stroke: vivid blue to cyan -->
+    <linearGradient id="frame" x1="120" y1="120" x2="470" y2="300" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#8ab6ff"/>
+      <stop offset="0.5" stop-color="#4d8bff"/>
+      <stop offset="1" stop-color="#2f6bff"/>
+    </linearGradient>
+    <!-- Waveform bars: white to blue -->
+    <linearGradient id="wave" x1="295" y1="150" x2="295" y2="270" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="1" stop-color="#b9d3ff"/>
+    </linearGradient>
+    <!-- Wordmark gradient -->
+    <linearGradient id="word" x1="560" y1="150" x2="560" y2="230" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="1" stop-color="#cfe0ff"/>
+    </linearGradient>
+    <!-- Record dot: red -->
+    <radialGradient id="rec" cx="291" cy="98" r="26" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ff8082"/>
+      <stop offset="0.45" stop-color="#ff4d4f"/>
+      <stop offset="1" stop-color="#e0272a"/>
+    </radialGradient>
+    <filter id="soft" x="-60%" y="-60%" width="220%" height="220%">
+      <feGaussianBlur stdDeviation="8"/>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect x="0" y="0" width="1280" height="400" fill="url(#bg)"/>
+  <rect x="0" y="0" width="1280" height="400" fill="url(#sheen)"/>
+  <!-- Inner hairline border -->
+  <rect x="6" y="6" width="1268" height="388" rx="20" ry="20" fill="none" stroke="#ffffff" stroke-opacity="0.08" stroke-width="2"/>
+
+  <!-- Accent glow behind the mark -->
+  <circle cx="300" cy="210" r="300" fill="url(#glow)"/>
+
+  <!-- ===== Logo mark (left) ===== -->
+  <!-- Screen / video frame -->
+  <rect x="130" y="128" width="330" height="200" rx="34" ry="34"
+        fill="#ffffff" fill-opacity="0.05"
+        stroke="url(#frame)" stroke-width="22"/>
+
+  <!-- Audio waveform (clean voice), centered -->
+  <g fill="url(#wave)">
+    <rect x="171" y="204" width="20" height="48" rx="10"/>
+    <rect x="213" y="186" width="20" height="84" rx="10"/>
+    <rect x="255" y="166" width="20" height="124" rx="10"/>
+    <rect x="297" y="150" width="20" height="156" rx="10"/>
+    <rect x="339" y="166" width="20" height="124" rx="10"/>
+    <rect x="381" y="186" width="20" height="84" rx="10"/>
+    <rect x="423" y="204" width="20" height="48" rx="10"/>
+  </g>
+
+  <!-- Record light (floats above the screen) -->
+  <circle cx="291" cy="98" r="26" fill="#ff4d4f" opacity="0.5" filter="url(#soft)"/>
+  <circle cx="291" cy="98" r="20" fill="url(#rec)"/>
+  <circle cx="285" cy="92" r="6" fill="#ffffff" fill-opacity="0.55"/>
+
+  <!-- ===== Wordmark + tagline (right) ===== -->
+  <text x="530" y="212"
+        font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif"
+        font-size="112" font-weight="700" letter-spacing="-2"
+        fill="url(#word)">CrispCast</text>
+  <text x="536" y="268"
+        font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif"
+        font-size="36" font-weight="400" letter-spacing="0.5"
+        fill="#9fb4d6">Crisp screen, clean voice.</text>
+  <!-- Accent underline -->
+  <rect x="536" y="286" width="360" height="4" rx="2" fill="#4d8bff" fill-opacity="0.8"/>
+</svg>
