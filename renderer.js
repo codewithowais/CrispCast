@@ -12,6 +12,10 @@ let recordedSystemAudio = false;
 let lastVideoPath = null;
 let lastVoicePath = null;
 let lastDurationSec = 0;
+let allSources = [];
+let idlePreviewTimer = null;
+let isRecording = false;
+let progressCb = null; // routed target for ffmpeg 'remux-progress' events
 
 const QUALITY_BITRATE = {
   high: 10_000_000,
@@ -88,6 +92,7 @@ async function loadSources() {
     setStatus('Grant Screen Recording permission, then relaunch.', 'err');
     return;
   }
+  allSources = sources;
   sourcesEl.innerHTML = '';
   sources.forEach((s) => {
     const div = document.createElement('div');
@@ -133,6 +138,43 @@ function selectSource(id, node) {
   selectedSourceId = id;
   document.querySelectorAll('.source').forEach((n) => n.classList.remove('selected'));
   if (node) node.classList.add('selected');
+  showIdlePreview();
+  startIdlePreviewLoop();
+}
+
+// ---------- idle preview (snapshot of the selected source, before recording) ----------
+function showIdlePreview() {
+  if (isRecording) return;
+  const s = allSources.find((x) => x.id === selectedSourceId);
+  const img = el('previewImg');
+  const wrap = document.querySelector('.preview-wrap');
+  if (s && s.thumbnail) {
+    img.src = s.thumbnail;
+    img.classList.add('show');
+    wrap.classList.add('has-thumb');
+  } else {
+    img.classList.remove('show');
+    wrap.classList.remove('has-thumb');
+  }
+}
+
+// Periodically refresh the snapshot so the preview tracks the screen — without
+// opening a capture stream (so macOS shows no "recording" indicator while idle).
+function startIdlePreviewLoop() {
+  stopIdlePreviewLoop();
+  idlePreviewTimer = setInterval(async () => {
+    if (isRecording || !selectedSourceId || !document.hasFocus()) return;
+    try {
+      allSources = await window.recorder.listSources();
+      showIdlePreview();
+    } catch (_) {}
+  }, 1000);
+}
+function stopIdlePreviewLoop() {
+  if (idlePreviewTimer) {
+    clearInterval(idlePreviewTimer);
+    idlePreviewTimer = null;
+  }
 }
 
 // ---------- mics ----------
@@ -186,6 +228,8 @@ async function startRecording() {
       video: { frameRate: { ideal: fps, max: fps } }
     });
 
+    isRecording = true;
+    stopIdlePreviewLoop();
     const pv = el('preview');
     pv.srcObject = screenStream;
     // Autoplay can silently no-op in Electron; force play and reveal the video.
@@ -290,96 +334,212 @@ async function stopRecording() {
     saved.push({ name: 'Voice track (raw, isolated)', path: p, size: blob.size });
   }
 
-  renderResults(saved);
   cleanupStreams();
   startBtn.disabled = false;
-  setStatus('Done. Saved ' + saved.length + ' file(s).', 'ok');
+  await finalizeAndRender(saved);
 }
 
-function renderResults(saved) {
-  resultsEl.innerHTML = '';
-  saved.forEach((f) => {
-    const mb = (f.size / (1024 * 1024)).toFixed(1);
-    const card = document.createElement('div');
-    card.className = 'result-card';
-    card.innerHTML = `
-      <div class="meta">
-        <div class="name">${f.name} · ${mb} MB</div>
-        <div class="path">${f.path}</div>
-      </div>
-      <button class="ghost">Reveal</button>`;
-    card.querySelector('button').addEventListener('click', () =>
-      window.recorder.revealFile(f.path)
-    );
-    resultsEl.appendChild(card);
+const mb = (bytes) => (bytes / (1024 * 1024)).toFixed(1);
+
+// Run an ffmpeg-backed op while showing its progress on `btn`.
+async function runWithProgress(btn, label, fn, onDone) {
+  const orig = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = `${label} 0%`;
+  progressCb = (pct) => { btn.textContent = `${label} ${pct}%`; };
+  try {
+    const res = await fn();
+    progressCb = null;
+    onDone(res);
+  } catch (err) {
+    progressCb = null;
+    btn.disabled = false;
+    btn.textContent = orig;
+    setStatus(`${label.replace(/…$/, '')} failed: ${err.message}`, 'err');
+  }
+}
+
+function resultCard(name, filePath, sizeBytes, opts = {}) {
+  const card = document.createElement('div');
+  card.className = 'result-card';
+  if (opts.accent) card.style.borderColor = opts.accent;
+
+  const meta = document.createElement('div');
+  meta.className = 'meta';
+  const n = document.createElement('div');
+  n.className = 'name';
+  n.textContent = name + (sizeBytes != null ? ` · ${mb(sizeBytes)} MB` : '');
+  const p = document.createElement('div');
+  p.className = 'path';
+  p.textContent = filePath;
+  meta.append(n, p);
+
+  const actions = document.createElement('div');
+  actions.className = 'card-actions';
+  const reveal = document.createElement('button');
+  reveal.className = 'ghost small';
+  reveal.textContent = 'Reveal';
+  reveal.addEventListener('click', () => window.recorder.revealFile(filePath));
+  actions.append(reveal);
+
+  card.append(meta, actions);
+  return { card, actions };
+}
+
+// Add a "Compress → smaller MP4" control (level picker + button) to a card.
+function addCompressControl(actions, inputPath) {
+  const sel = document.createElement('select');
+  sel.className = 'mini';
+  [['balanced', '1080p'], ['small', '720p']].forEach(([v, t]) => {
+    const o = document.createElement('option');
+    o.value = v;
+    o.textContent = t;
+    sel.appendChild(o);
   });
-
-  // Offer the clean-voice + merge step when we have both a video and a mic track.
-  if (lastVideoPath && lastVoicePath) {
-    const action = document.createElement('div');
-    action.className = 'result-card';
-    action.style.borderColor = 'var(--accent-2)';
-
-    const meta = document.createElement('div');
-    meta.className = 'meta';
-    const name = document.createElement('div');
-    name.className = 'name';
-    name.textContent = 'Clean the voice & merge into one MP4';
-    const sub = document.createElement('div');
-    sub.className = 'path';
-    sub.textContent =
-      'Denoises the mic, mixes it' +
-      (recordedSystemAudio ? ' with system audio' : '') +
-      ', and exports H.264 MP4.';
-    meta.append(name, sub);
-
-    const btn = document.createElement('button');
-    btn.className = 'primary';
-    btn.textContent = 'Clean voice → MP4';
-
-    btn.addEventListener('click', async () => {
-      btn.disabled = true;
-      btn.textContent = 'Processing… 0%';
-      window.recorder.onRemuxProgress((pct) => {
-        btn.textContent = `Processing… ${pct}%`;
-      });
-      try {
-        const res = await window.recorder.cleanAndRemux({
-          videoPath: lastVideoPath,
-          voicePath: lastVoicePath,
-          hasSystemAudio: recordedSystemAudio,
-          durationSec: lastDurationSec
-        });
-        const mb = (res.size / (1024 * 1024)).toFixed(1);
-        const done = document.createElement('div');
-        done.className = 'result-card';
-        done.style.borderColor = 'var(--ok)';
-        const m2 = document.createElement('div');
-        m2.className = 'meta';
-        const n2 = document.createElement('div');
-        n2.className = 'name';
-        n2.textContent = `✓ Clean MP4 · ${mb} MB`;
-        const p2 = document.createElement('div');
-        p2.className = 'path';
-        p2.textContent = res.path;
-        m2.append(n2, p2);
-        const b2 = document.createElement('button');
-        b2.className = 'ghost';
-        b2.textContent = 'Reveal';
-        b2.addEventListener('click', () => window.recorder.revealFile(res.path));
-        done.append(m2, b2);
-        resultsEl.appendChild(done);
-        action.remove();
-        setStatus('Clean MP4 ready.', 'ok');
-      } catch (err) {
+  const btn = document.createElement('button');
+  btn.className = 'ghost small';
+  btn.textContent = 'Compress';
+  btn.addEventListener('click', () => {
+    runWithProgress(
+      btn,
+      'Compressing…',
+      () => window.recorder.compressVideo({
+        inputPath,
+        level: sel.value,
+        durationSec: lastDurationSec
+      }),
+      (res) => {
+        const pct = res.originalSize
+          ? Math.max(0, Math.round((1 - res.size / res.originalSize) * 100))
+          : 0;
+        const label = sel.value === 'small' ? '720p' : '1080p';
+        const { card } = resultCard(
+          `✓ Compressed (${label}) · ${pct}% smaller`,
+          res.path,
+          res.size,
+          { accent: 'var(--ok)' }
+        );
+        resultsEl.appendChild(card);
         btn.disabled = false;
-        btn.textContent = 'Clean voice → MP4';
-        setStatus('Cleaning failed: ' + err.message, 'err');
+        btn.textContent = 'Compress';
+        setStatus(`Compressed MP4 ready — ${pct}% smaller.`, 'ok');
       }
-    });
+    );
+  });
+  actions.append(sel, btn);
+}
 
-    action.append(meta, btn);
-    resultsEl.appendChild(action);
+// A compact, muted row for the raw source files.
+function sourceRow(name, filePath) {
+  const row = document.createElement('div');
+  row.className = 'source-row';
+  const label = document.createElement('span');
+  label.className = 'source-label';
+  label.textContent = name;
+  const reveal = document.createElement('button');
+  reveal.className = 'ghost small';
+  reveal.textContent = 'Reveal';
+  reveal.addEventListener('click', () => window.recorder.revealFile(filePath));
+  row.append(label, reveal);
+  return row;
+}
+
+// An in-progress card with a live percentage while ffmpeg runs.
+function progressCard(label) {
+  const card = document.createElement('div');
+  card.className = 'result-card';
+  card.style.borderColor = 'var(--accent-2)';
+  const meta = document.createElement('div');
+  meta.className = 'meta';
+  const n = document.createElement('div');
+  n.className = 'name';
+  n.textContent = `${label} 0%`;
+  meta.append(n);
+  card.append(meta);
+  return { card, setPct: (p) => { n.textContent = `${label} ${p}%`; } };
+}
+
+// After recording: auto-clean+merge into one MP4 (the primary result),
+// then list the raw tracks as secondary source files.
+async function finalizeAndRender(saved) {
+  resultsEl.innerHTML = '';
+  const rawVideo = saved.find((f) => f.path === lastVideoPath);
+  const rawVoice = saved.find((f) => f.path === lastVoicePath);
+
+  let primaryShown = false;
+
+  if (lastVideoPath && lastVoicePath) {
+    // Auto clean + merge.
+    setStatus('Cleaning voice & merging into one MP4…');
+    const prog = progressCard('Cleaning voice & merging…');
+    resultsEl.appendChild(prog.card);
+    progressCb = (pct) => prog.setPct(pct);
+    try {
+      const res = await window.recorder.cleanAndRemux({
+        videoPath: lastVideoPath,
+        voicePath: lastVoicePath,
+        hasSystemAudio: recordedSystemAudio,
+        durationSec: lastDurationSec
+      });
+      progressCb = null;
+      prog.card.remove();
+      const { card, actions } = resultCard(
+        '✓ Recording (clean voice + video)', res.path, res.size, { accent: 'var(--ok)' }
+      );
+      addCompressControl(actions, res.path);
+      resultsEl.appendChild(card);
+      primaryShown = true;
+      setStatus('Done — one clean MP4 is ready.', 'ok');
+    } catch (err) {
+      progressCb = null;
+      prog.card.remove();
+      setStatus('Auto clean/merge failed: ' + err.message + ' — raw files are saved below.', 'err');
+      // Fall back to a manual retry button.
+      const { card, actions } = resultCard('Merge failed — retry manually', lastVideoPath, null, {});
+      const retry = document.createElement('button');
+      retry.className = 'primary';
+      retry.textContent = 'Clean voice → MP4';
+      retry.addEventListener('click', () => runWithProgress(
+        retry, 'Processing…',
+        () => window.recorder.cleanAndRemux({
+          videoPath: lastVideoPath, voicePath: lastVoicePath,
+          hasSystemAudio: recordedSystemAudio, durationSec: lastDurationSec
+        }),
+        (res) => {
+          const done = resultCard('✓ Clean MP4', res.path, res.size, { accent: 'var(--ok)' });
+          addCompressControl(done.actions, res.path);
+          resultsEl.appendChild(done.card);
+          card.remove();
+          setStatus('Clean MP4 ready.', 'ok');
+        }
+      ));
+      actions.append(retry);
+      resultsEl.appendChild(card);
+    }
+  } else if (rawVideo) {
+    // No microphone track — the screen recording (with system audio) is the output.
+    const { card, actions } = resultCard(
+      '✓ Recording (screen + system audio)', rawVideo.path, rawVideo.size, { accent: 'var(--ok)' }
+    );
+    addCompressControl(actions, rawVideo.path);
+    resultsEl.appendChild(card);
+    primaryShown = true;
+    setStatus('Done.', 'ok');
+  }
+
+  // Secondary: the raw source files (skip any already shown as the primary).
+  const sources = [];
+  if (rawVideo && !(primaryShown && !lastVoicePath)) {
+    sources.push(sourceRow('Raw screen video (+ system audio)', rawVideo.path));
+  }
+  if (rawVoice) sources.push(sourceRow('Raw voice track (isolated, for re-cleaning)', rawVoice.path));
+
+  if (sources.length) {
+    const head = document.createElement('div');
+    head.className = 'sources-head';
+    head.textContent = 'Source files';
+    resultsEl.appendChild(head);
+    sources.forEach((r) => resultsEl.appendChild(r));
   }
 }
 
@@ -392,6 +552,10 @@ function cleanupStreams() {
   el('preview').srcObject = null;
   const wrap = document.querySelector('.preview-wrap');
   if (wrap) wrap.classList.remove('live');
+  // Back to idle: restore the snapshot preview and its refresh loop.
+  isRecording = false;
+  showIdlePreview();
+  startIdlePreviewLoop();
 }
 
 // ---------- timer ----------
@@ -441,6 +605,11 @@ el('changeDirBtn').addEventListener('click', async () => {
 });
 startBtn.addEventListener('click', startRecording);
 stopBtn.addEventListener('click', stopRecording);
+
+// Single progress listener, routed to whichever button is currently working.
+window.recorder.onRemuxProgress((pct) => {
+  if (progressCb) progressCb(pct);
+});
 
 (async function init() {
   loadLogo();

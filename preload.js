@@ -13,6 +13,7 @@ contextBridge.exposeInMainWorld('recorder', {
   revealFile: (filePath) => ipcRenderer.invoke('reveal-file', filePath),
   openScreenSettings: () => ipcRenderer.invoke('open-screen-settings'),
   cleanAndRemux: (opts) => ipcRenderer.invoke('clean-and-remux', opts),
+  compressVideo: (opts) => ipcRenderer.invoke('compress-video', opts),
   onRemuxProgress: (cb) => ipcRenderer.on('remux-progress', (_e, pct) => cb(pct)),
   selftestDone: (report) => ipcRenderer.invoke('selftest-done', report)
 });

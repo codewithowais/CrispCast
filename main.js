@@ -18,6 +18,9 @@ const VOICE_FILTER =
 
 const SELFTEST = process.argv.includes('--selftest');
 
+// Set the app name early (affects the macOS menu bar and dock label in dev).
+app.setName('CrispCast');
+
 let mainWindow;
 
 // The source the renderer picked, read by the display-media request handler below.
@@ -119,6 +122,14 @@ function createWindow() {
 
 app.whenReady().then(() => {
   loadSettings();
+  // In development the macOS dock shows Electron's default icon; set ours
+  // explicitly. (A packaged build uses the .icns from the bundle instead.)
+  if (process.platform === 'darwin' && app.dock) {
+    const iconPng = path.join(__dirname, 'assets', 'icon.png');
+    try {
+      if (fs.existsSync(iconPng)) app.dock.setIcon(iconPng);
+    } catch (_) {}
+  }
   createWindow();
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
@@ -135,7 +146,8 @@ app.on('window-all-closed', () => {
 ipcMain.handle('list-sources', async () => {
   const sources = await desktopCapturer.getSources({
     types: ['screen', 'window'],
-    thumbnailSize: { width: 320, height: 200 },
+    // Higher-res thumbnails so the preview snapshot looks crisp, not upscaled.
+    thumbnailSize: { width: 1280, height: 800 },
     fetchWindowIcons: true
   });
   return sources.map((s) => ({
@@ -229,34 +241,10 @@ function parseTimeToSeconds(str) {
   return (+m[1]) * 3600 + (+m[2]) * 60 + parseFloat(m[3]);
 }
 
-ipcMain.handle('clean-and-remux', (event, { videoPath, voicePath, hasSystemAudio, durationSec }) => {
+// Shared ffmpeg runner: spawns ffmpeg, streams a 0–100% progress via
+// 'remux-progress', and resolves with the output path + size.
+function runFfmpeg(event, args, outPath, durationSec) {
   return new Promise((resolve, reject) => {
-    if (!fs.existsSync(videoPath) || !fs.existsSync(voicePath)) {
-      return reject(new Error('Source files not found.'));
-    }
-    const outPath = videoPath.replace(/\.webm$/i, '') + '-clean.mp4';
-
-    const filter = hasSystemAudio
-      ? `[1:a]${VOICE_FILTER}[vc];[0:a][vc]amix=inputs=2:duration=longest:normalize=0[aout]`
-      : `[1:a]${VOICE_FILTER}[aout]`;
-
-    const args = [
-      '-y',
-      '-i', videoPath,
-      '-i', voicePath,
-      '-filter_complex', filter,
-      '-map', '0:v:0',
-      '-map', '[aout]',
-      '-c:v', 'libx264',
-      '-crf', '18',
-      '-preset', 'veryfast',
-      '-pix_fmt', 'yuv420p',
-      '-movflags', '+faststart',
-      '-c:a', 'aac',
-      '-b:a', '256k',
-      outPath
-    ];
-
     const ff = spawn(ffmpegPath, args);
     // MediaRecorder WebM has no duration header, so seed from the known length.
     let totalDur = durationSec && durationSec > 0 ? durationSec : 0;
@@ -286,6 +274,53 @@ ipcMain.handle('clean-and-remux', (event, { videoPath, voicePath, hasSystemAudio
       }
     });
   });
+}
+
+ipcMain.handle('clean-and-remux', (event, { videoPath, voicePath, hasSystemAudio, durationSec }) => {
+  if (!fs.existsSync(videoPath) || !fs.existsSync(voicePath)) {
+    return Promise.reject(new Error('Source files not found.'));
+  }
+  const outPath = videoPath.replace(/\.webm$/i, '') + '-clean.mp4';
+  const filter = hasSystemAudio
+    ? `[1:a]${VOICE_FILTER}[vc];[0:a][vc]amix=inputs=2:duration=longest:normalize=0[aout]`
+    : `[1:a]${VOICE_FILTER}[aout]`;
+  const args = [
+    '-y', '-i', videoPath, '-i', voicePath,
+    '-filter_complex', filter,
+    '-map', '0:v:0', '-map', '[aout]',
+    '-c:v', 'libx264', '-crf', '18', '-preset', 'veryfast',
+    '-pix_fmt', 'yuv420p', '-movflags', '+faststart',
+    '-c:a', 'aac', '-b:a', '256k',
+    outPath
+  ];
+  return runFfmpeg(event, args, outPath, durationSec);
+});
+
+// Compress any produced file into a smaller, shareable MP4.
+// levels: 'balanced' → cap at 1080p, CRF 30; 'small' → cap at 720p, CRF 32.
+ipcMain.handle('compress-video', (event, { inputPath, level, durationSec }) => {
+  if (!fs.existsSync(inputPath)) {
+    return Promise.reject(new Error('File not found: ' + inputPath));
+  }
+  const originalSize = fs.statSync(inputPath).size;
+  const cap = level === 'small' ? 720 : 1080;
+  const crf = level === 'small' ? '32' : '30';
+  const audioKbps = level === 'small' ? '96k' : '128k';
+  const base = inputPath.replace(/\.(webm|mp4|mov|mkv)$/i, '');
+  const outPath = `${base}-compressed-${cap}p.mp4`;
+  const args = [
+    '-y', '-i', inputPath,
+    // Downscale only if taller than the cap (never upscale); keep width even.
+    '-vf', `scale=-2:min(${cap}\\,ih)`,
+    '-c:v', 'libx264', '-crf', crf, '-preset', 'veryfast',
+    '-pix_fmt', 'yuv420p', '-movflags', '+faststart',
+    '-c:a', 'aac', '-b:a', audioKbps,
+    outPath
+  ];
+  return runFfmpeg(event, args, outPath, durationSec).then((r) => ({
+    ...r,
+    originalSize
+  }));
 });
 
 // ---- Self-test: write recorded files + a JSON report, then quit ----

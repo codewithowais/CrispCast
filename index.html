@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Clean Screen Recorder</title>
+  <title>CrispCast</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
@@ -72,9 +72,11 @@
         <span class="timer" id="timer">00:00</span>
       </div>
       <div class="preview-wrap">
+        <span class="preview-badge">Snapshot · updates live · full motion while recording</span>
         <video id="preview" muted autoplay playsinline></video>
+        <img id="previewImg" class="preview-thumb" alt="" />
         <div class="preview-empty" id="previewEmpty">
-          <span>Live preview appears here while recording</span>
+          <span>Select a screen or window above to preview it here</span>
         </div>
       </div>
 
