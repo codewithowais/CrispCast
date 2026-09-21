@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>CrispCast — Download</title>
+<meta name="description" content="CrispCast — crisp screen, clean voice. Download the screen recorder for macOS, Windows, or Linux." />
+<style>
+  :root {
+    --bg:#0e0f13; --panel:#1a1c22; --panel-2:#23262e; --border:#2c2f38;
+    --text:#e8eaed; --muted:#9aa0aa; --accent:#ff4d4f; --accent-2:#4d8bff; --ok:#35c86b;
+  }
+  * { box-sizing:border-box; }
+  body {
+    margin:0; min-height:100vh; background:radial-gradient(1200px 600px at 50% -10%, #1a1e2a 0%, var(--bg) 60%);
+    color:var(--text); font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;
+    display:flex; flex-direction:column; align-items:center; padding:48px 16px 60px;
+  }
+  .banner { width:100%; max-width:720px; border-radius:16px; display:block; margin-bottom:28px; }
+  h1 { font-size:15px; color:var(--muted); font-weight:500; margin:0 0 6px; letter-spacing:0.3px; }
+  .tagline { font-size:26px; font-weight:700; margin:0 0 28px; text-align:center; }
+  .primary-wrap { display:flex; flex-direction:column; align-items:center; gap:10px; min-height:96px; }
+  a.download {
+    display:inline-flex; align-items:center; gap:12px; text-decoration:none;
+    background:var(--accent-2); color:#fff; font-size:18px; font-weight:600;
+    padding:16px 30px; border-radius:12px; transition:transform .12s, filter .12s;
+    box-shadow:0 8px 30px rgba(77,139,255,.35);
+  }
+  a.download:hover { transform:translateY(-2px); filter:brightness(1.08); }
+  a.download .os-icon { font-size:22px; }
+  .sub { font-size:12px; color:var(--muted); }
+  .others { margin-top:34px; width:100%; max-width:460px; }
+  .others h2 { font-size:11px; text-transform:uppercase; letter-spacing:.6px; color:var(--muted); text-align:center; margin:0 0 12px; }
+  .grid { display:flex; flex-direction:column; gap:8px; }
+  a.alt {
+    display:flex; align-items:center; justify-content:space-between; gap:10px; text-decoration:none;
+    background:var(--panel); border:1px solid var(--border); border-radius:10px; padding:12px 16px; color:var(--text);
+    font-size:14px; transition:border-color .12s, background .12s;
+  }
+  a.alt:hover { border-color:var(--accent-2); background:var(--panel-2); }
+  a.alt .name { display:flex; align-items:center; gap:10px; }
+  a.alt .size { color:var(--muted); font-size:12px; }
+  .note { margin-top:26px; max-width:520px; text-align:center; font-size:12px; color:var(--muted); line-height:1.6; }
+  .note code { background:var(--panel-2); padding:1px 6px; border-radius:5px; }
+  a.text { color:var(--accent-2); text-decoration:none; }
+  a.text:hover { text-decoration:underline; }
+  footer { margin-top:36px; font-size:12px; color:var(--muted); }
+  .spinner { width:22px; height:22px; border:3px solid var(--border); border-top-color:var(--accent-2); border-radius:50%; animation:spin 1s linear infinite; }
+  @keyframes spin { to { transform:rotate(360deg); } }
+</style>
+</head>
+<body>
+  <img class="banner" src="https://raw.githubusercontent.com/codewithowais/CrispCast/main/assets/banner.png" alt="CrispCast" />
+  <h1>Crisp screen, clean voice.</h1>
+  <p class="tagline">Download CrispCast</p>
+
+  <div class="primary-wrap" id="primary">
+    <div class="spinner" aria-label="Loading latest release"></div>
+    <div class="sub">Finding the latest build for your system…</div>
+  </div>
+
+  <div class="others">
+    <h2>All platforms</h2>
+    <div class="grid" id="all"></div>
+  </div>
+
+  <p class="note" id="note">
+    Builds are unsigned. On <strong>macOS</strong>, right-click the app → <strong>Open</strong>.
+    On <strong>Windows</strong>, click <strong>More info → Run anyway</strong> on the SmartScreen prompt.
+  </p>
+
+  <footer>
+    <a class="text" href="https://github.com/codewithowais/CrispCast">Source on GitHub</a> ·
+    <a class="text" href="https://github.com/codewithowais/CrispCast/releases/latest">All releases</a>
+  </footer>
+
+<script>
+  const REPO = "codewithowais/CrispCast";
+  const RELEASES = "https://github.com/" + REPO + "/releases/latest";
+
+  function detectOS() {
+    const ua = (navigator.userAgent || "") + " " + (navigator.platform || "");
+    if (/Android/i.test(ua)) return "android";
+    if (/iPhone|iPad|iPod/i.test(ua)) return "ios";
+    if (/Mac/i.test(ua)) return "mac";
+    if (/Win/i.test(ua)) return "win";
+    if (/Linux/i.test(ua)) return "linux";
+    return "unknown";
+  }
+
+  // Classify a release asset by platform.
+  function classify(name) {
+    const n = name.toLowerCase();
+    if (n.endsWith(".blockmap") || n.endsWith(".yml") || n.endsWith(".yaml")) return null;
+    if (n.endsWith(".exe")) return { os: "win", label: "Windows installer (.exe)", icon: "🪟" };
+    if (n.endsWith(".dmg")) return n.includes("arm64")
+      ? { os: "mac", arch: "arm64", label: "macOS · Apple Silicon (.dmg)", icon: "" }
+      : { os: "mac", arch: "x64", label: "macOS · Intel (.dmg)", icon: "" };
+    if (n.endsWith(".appimage")) return { os: "linux", label: "Linux (.AppImage)", icon: "🐧" };
+    if (n.endsWith(".deb")) return { os: "linux", label: "Linux (.deb)", icon: "🐧" };
+    if (n.endsWith(".zip") && n.includes("mac")) return null; // prefer dmg for the buttons
+    return null;
+  }
+
+  function fmtSize(b) { return (b / 1048576).toFixed(0) + " MB"; }
+
+  const OS_LABEL = { mac: "macOS", win: "Windows", linux: "Linux" };
+  const OS_ICON = { mac: "", win: "🪟", linux: "🐧" };
+
+  async function init() {
+    const primary = document.getElementById("primary");
+    const allEl = document.getElementById("all");
+    let assets = [];
+    try {
+      const res = await fetch("https://api.github.com/repos/" + REPO + "/releases/latest",
+        { headers: { "Accept": "application/vnd.github+json" } });
+      if (!res.ok) throw new Error("HTTP " + res.status);
+      const data = await res.json();
+      assets = (data.assets || []).map(a => ({
+        name: a.name, url: a.browser_download_url, size: a.size, meta: classify(a.name)
+      })).filter(a => a.meta);
+    } catch (e) {
+      // Fallback: send everyone to the releases page.
+      primary.innerHTML = '<a class="download" href="' + RELEASES + '">Download from GitHub Releases</a>' +
+        '<div class="sub">Couldn\'t auto-detect — pick your file on the releases page.</div>';
+      return;
+    }
+
+    if (!assets.length) {
+      primary.innerHTML = '<a class="download" href="' + RELEASES + '">View releases</a>';
+      return;
+    }
+
+    const os = detectOS();
+    // Choose the primary asset for the detected OS.
+    let pick = null;
+    if (os === "mac") pick = assets.find(a => a.meta.os === "mac" && a.meta.arch === "arm64") || assets.find(a => a.meta.os === "mac");
+    else if (os === "win") pick = assets.find(a => a.meta.os === "win");
+    else if (os === "linux") pick = assets.find(a => a.meta.label.includes("AppImage")) || assets.find(a => a.meta.os === "linux");
+
+    if (pick) {
+      const detected = OS_LABEL[pick.meta.os] || "your system";
+      primary.innerHTML =
+        '<a class="download" href="' + pick.url + '">' +
+        '<span class="os-icon">' + (OS_ICON[pick.meta.os] || "⬇") + '</span>' +
+        'Download for ' + detected + '</a>' +
+        '<div class="sub">' + pick.name + " · " + fmtSize(pick.size) +
+        (pick.meta.arch === "arm64" ? ' · <a class="text" id="intel" href="#">Intel Mac?</a>' : '') +
+        '</div>';
+      if (pick.meta.arch === "arm64") {
+        const intel = assets.find(a => a.meta.os === "mac" && a.meta.arch === "x64");
+        const link = document.getElementById("intel");
+        if (intel && link) link.href = intel.url;
+      }
+    } else {
+      primary.innerHTML = '<a class="download" href="' + RELEASES + '">Download</a>' +
+        '<div class="sub">No prebuilt file detected for your system — see all releases.</div>';
+    }
+
+    // List every platform asset.
+    allEl.innerHTML = "";
+    assets.sort((a, b) => a.meta.os.localeCompare(b.meta.os) || a.name.localeCompare(b.name));
+    for (const a of assets) {
+      const row = document.createElement("a");
+      row.className = "alt";
+      row.href = a.url;
+      row.innerHTML = '<span class="name">' + (OS_ICON[a.meta.os] || "⬇") + " " + a.meta.label + '</span>' +
+                      '<span class="size">' + fmtSize(a.size) + '</span>';
+      allEl.appendChild(row);
+    }
+  }
+  init();
+</script>
+</body>
+</html>

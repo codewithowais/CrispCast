@@ -4,7 +4,7 @@
   <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/License-MIT-4d8bff.svg"></a>
   <img alt="Platforms" src="https://img.shields.io/badge/Platforms-macOS%20%7C%20Windows%20%7C%20Linux-2E3340.svg">
   <img alt="Built with Electron" src="https://img.shields.io/badge/Built%20with-Electron-47848F.svg?logo=electron&logoColor=white">
-  <a href="https://github.com/codewithowais/CrispCast/releases/latest"><img alt="Download" src="https://img.shields.io/badge/Download-Latest%20release-ff4d4f.svg"></a>
+  <a href="https://codewithowais.github.io/CrispCast/"><img alt="Download" src="https://img.shields.io/badge/Download-One--click-ff4d4f.svg"></a>
 </p>
 
 # CrispCast
@@ -17,7 +17,10 @@ then denoises the voice and merges everything into a single clean H.264 MP4.
 
 ## Download
 
-Grab a prebuilt installer from the
+### ⬇️ [One-click download — auto-detects your OS](https://codewithowais.github.io/CrispCast/)
+
+The download page picks the right installer for your system automatically. Or
+grab a specific build from the
 **[Releases page](https://github.com/codewithowais/CrispCast/releases/latest)**:
 
 | Platform | File |
