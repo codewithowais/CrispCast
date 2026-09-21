@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  CrispCast hardened-runtime entitlements.
+
+  Electron under the macOS hardened runtime needs the JIT / unsigned-memory
+  entitlements, and disable-library-validation is required so the bundled,
+  independently-signed ffmpeg-static binary can be spawned.
+
+  device.audio-input       -> microphone capture (the clean voice track)
+  device.camera            -> optional webcam capture
+
+  NOTE: There is no entitlement for screen capture. Screen Recording is granted
+  at runtime through macOS TCC (System Settings > Privacy & Security > Screen
+  Recording) the first time the app calls desktopCapturer / getDisplayMedia.
+  The user-facing prompt strings live in the Info.plist and are injected via
+  `mac.extendInfo` in package.json:
+    NSMicrophoneUsageDescription
+    NSCameraUsageDescription
+    NSScreenCaptureUsageDescription
+-->
+<plist version="1.0">
+<dict>
+    <key>com.apple.security.cs.allow-jit</key>
+    <true/>
+    <key>com.apple.security.cs.allow-unsigned-executable-memory</key>
+    <true/>
+    <key>com.apple.security.cs.disable-library-validation</key>
+    <true/>
+    <key>com.apple.security.device.audio-input</key>
+    <true/>
+    <key>com.apple.security.device.camera</key>
+    <true/>
+</dict>
+</plist>
