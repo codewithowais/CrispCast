@@ -25,7 +25,9 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 14px 20px;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 12px clamp(14px, 3vw, 24px);
   border-bottom: 1px solid var(--border);
   position: sticky;
   top: 0;
@@ -52,7 +54,11 @@ body {
 .perms .chip.ok { color: var(--ok); border-color: rgba(53,200,107,0.4); }
 .perms .chip.bad { color: var(--accent); border-color: rgba(255,77,79,0.4); cursor: pointer; }
 
-main { padding: 18px 20px 40px; max-width: 780px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
+main {
+  padding: clamp(14px, 2.5vw, 26px) clamp(14px, 3vw, 26px) 44px;
+  max-width: 900px; width: 100%; margin: 0 auto;
+  display: flex; flex-direction: column; gap: clamp(12px, 1.8vw, 18px);
+}
 
 .panel {
   background: var(--panel);
@@ -87,8 +93,10 @@ h2 { font-size: 13px; font-weight: 600; margin: 0 0 12px; color: var(--text); }
 .row span { font-size: 13px; color: var(--muted); }
 select {
   background: var(--panel-2); color: var(--text); border: 1px solid var(--border);
-  border-radius: 8px; padding: 7px 10px; font-size: 13px; min-width: 170px; outline: none;
+  border-radius: 8px; padding: 7px 10px; font-size: 13px;
+  min-width: 0; max-width: 100%; outline: none;
 }
+.row select { min-width: 150px; }
 select:focus { border-color: var(--accent-2); }
 
 .toggle { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; font-size: 13px; cursor: pointer; }
@@ -141,7 +149,7 @@ video {
 }
 .savebar-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); }
 .savebar-path {
-  flex: 1; font-size: 12px; color: var(--text);
+  flex: 1; min-width: 0; font-size: 12px; color: var(--text);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis; direction: rtl; text-align: left;
 }
 button.small { padding: 5px 10px; font-size: 12px; }
@@ -167,13 +175,14 @@ button:disabled { opacity: 0.4; cursor: not-allowed; }
 .results { margin-top: 12px; display: flex; flex-direction: column; gap: 8px; }
 .result-card {
   background: var(--panel-2); border: 1px solid var(--border); border-radius: 8px;
-  padding: 10px 12px; display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding: 10px 12px; display: flex; align-items: center; justify-content: space-between;
+  gap: 10px; flex-wrap: wrap;
 }
-.result-card .meta { font-size: 12px; }
+.result-card .meta { font-size: 12px; min-width: 0; flex: 1 1 200px; }
 .result-card .meta .name { color: var(--text); font-weight: 500; }
 .result-card .meta .path { color: var(--muted); font-size: 11px; word-break: break-all; }
 .result-card button { padding: 6px 12px; font-size: 12px; }
-.card-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.card-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 select.mini {
   min-width: 0; padding: 5px 8px; font-size: 12px;
   background: var(--panel); border: 1px solid var(--border);
@@ -192,4 +201,34 @@ select.mini {
 .source-label {
   font-size: 11px; color: var(--muted);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+/* ---------- Responsive: small windows / phones ---------- */
+@media (max-width: 560px) {
+  .brand h1 { font-size: 14px; }
+  .panel { padding: 13px; }
+  .two-col { gap: 16px; }
+  /* Stack each label/control pair and let controls fill the width. */
+  .row { flex-direction: column; align-items: stretch; gap: 6px; }
+  .row select { min-width: 0; width: 100%; }
+  .controls button { flex: 1 1 auto; }
+  .savebar { flex-wrap: wrap; }
+  .sources { grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); max-height: 220px; }
+  .card-actions { width: 100%; }
+  .card-actions button { flex: 1 1 auto; }
+}
+
+/* Very narrow: keep the audio/quality columns single-column earlier. */
+@media (max-width: 640px) {
+  .two-col { grid-template-columns: 1fr; }
+}
+
+/* ---------- Responsive: large screens ---------- */
+@media (min-width: 1100px) {
+  main { max-width: 960px; }
+}
+
+/* Respect reduced-motion preferences. */
+@media (prefers-reduced-motion: reduce) {
+  * { animation: none !important; transition: none !important; }
 }

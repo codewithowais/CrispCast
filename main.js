@@ -80,10 +80,10 @@ function createWindow() {
   const winIcon = fs.existsSync(iconPng) ? iconPng : undefined;
 
   mainWindow = new BrowserWindow({
-    width: 820,
-    height: 720,
-    minWidth: 640,
-    minHeight: 560,
+    width: 860,
+    height: 740,
+    minWidth: 380,
+    minHeight: 480,
     title: 'CrispCast',
     icon: winIcon,
     backgroundColor: '#0e0f13',
