@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, desktopCapturer, session, systemPreferences, shell, dialog, Menu } = require('electron');
+const { app, BrowserWindow, ipcMain, desktopCapturer, session, systemPreferences, shell, dialog, Menu, Tray, nativeImage } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const { spawn } = require('child_process');
@@ -33,6 +33,9 @@ if (process.platform === 'darwin') {
 }
 
 let mainWindow;
+let tray = null;
+let isRecordingState = false;
+let isQuitting = false;
 
 // The source the renderer picked, read by the display-media request handler below.
 let selectedSourceId = null;
@@ -135,6 +138,80 @@ function createWindow() {
   );
 
   mainWindow.loadFile(SELFTEST ? 'selftest.html' : 'index.html');
+
+  // Closing the window hides it to the tray instead of quitting, so the quick
+  // record widget stays available. Real quit goes through the tray or Cmd/Ctrl+Q.
+  mainWindow.on('close', (e) => {
+    if (!isQuitting && !SELFTEST) {
+      e.preventDefault();
+      mainWindow.hide();
+      if (process.platform === 'darwin' && app.dock) app.dock.hide();
+    }
+  });
+}
+
+// ---- Tray / menu-bar quick-record widget ----
+function showMainWindow() {
+  if (!mainWindow || mainWindow.isDestroyed()) {
+    createWindow();
+    return;
+  }
+  if (process.platform === 'darwin' && app.dock) app.dock.show();
+  mainWindow.show();
+  mainWindow.focus();
+}
+
+function trayImage() {
+  if (process.platform === 'darwin') {
+    const img = nativeImage.createFromPath(path.join(__dirname, 'assets', 'trayTemplate.png'));
+    img.setTemplateImage(true); // adapts to light/dark menu bar
+    return img;
+  }
+  return path.join(__dirname, 'assets', 'trayColor.png');
+}
+
+function buildTrayMenu() {
+  return Menu.buildFromTemplate([
+    {
+      label: isRecordingState ? '■  Stop recording' : '●  Start recording',
+      click: () => {
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.webContents.send(isRecordingState ? 'tray-stop' : 'tray-start');
+        } else {
+          showMainWindow();
+        }
+      }
+    },
+    { type: 'separator' },
+    { label: 'Open CrispCast', click: () => showMainWindow() },
+    {
+      label: 'Open recordings folder',
+      click: () => { shell.openPath(ensureRecordingsDir()); }
+    },
+    { type: 'separator' },
+    { label: 'Quit CrispCast', click: () => { isQuitting = true; app.quit(); } }
+  ]);
+}
+
+function updateTray() {
+  if (!tray || tray.isDestroyed()) return;
+  tray.setToolTip(isRecordingState ? 'CrispCast — Recording…' : 'CrispCast');
+  tray.setContextMenu(buildTrayMenu());
+  if (process.platform === 'darwin') tray.setTitle(isRecordingState ? ' ●' : '');
+}
+
+function createTray() {
+  if (SELFTEST) return;
+  try {
+    tray = new Tray(trayImage());
+    updateTray();
+    // On Windows/Linux a left click opens the app; macOS shows the menu.
+    tray.on('click', () => {
+      if (process.platform !== 'darwin') showMainWindow();
+    });
+  } catch (_) {
+    tray = null;
+  }
 }
 
 app.whenReady().then(() => {
@@ -175,13 +252,20 @@ app.whenReady().then(() => {
   }
 
   createWindow();
+  createTray();
   app.on('activate', () => {
+    // Dock/taskbar re-open (or macOS reactivate) restores the hidden window.
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
+    else showMainWindow();
   });
 });
 
+app.on('before-quit', () => { isQuitting = true; });
+
+// The window hides to the tray on close, so all-windows-closed normally won't
+// fire. Keep the app alive in the tray regardless; quit is explicit (tray/⌘Q).
 app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') app.quit();
+  if (isQuitting) app.quit();
 });
 
 // ---- IPC ----
@@ -208,6 +292,13 @@ ipcMain.handle('list-sources', async () => {
 ipcMain.handle('set-capture-config', (_e, { sourceId, systemAudio }) => {
   selectedSourceId = sourceId;
   captureSystemAudio = !!systemAudio;
+  return true;
+});
+
+// Renderer reports recording start/stop so the tray widget reflects the state.
+ipcMain.handle('recording-state', (_e, state) => {
+  isRecordingState = !!state;
+  updateTray();
   return true;
 });
 

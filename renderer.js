@@ -328,6 +328,7 @@ async function startRecording() {
     stopBtn.disabled = false;
     dotEl.classList.add('recording');
     startTimer();
+    try { window.recorder.notifyRecordingState(true); } catch (_) {}
     const bits = [];
     bits.push('screen video');
     if (wantSystemAudio) bits.push('system audio');
@@ -597,6 +598,7 @@ function cleanupStreams() {
   if (wrap) wrap.classList.remove('live');
   // Back to idle: restore the snapshot preview and its refresh loop.
   isRecording = false;
+  try { window.recorder.notifyRecordingState(false); } catch (_) {}
   showIdlePreview();
   startIdlePreviewLoop();
 }
@@ -653,6 +655,10 @@ stopBtn.addEventListener('click', stopRecording);
 window.recorder.onRemuxProgress((pct) => {
   if (progressCb) progressCb(pct);
 });
+
+// Quick-record from the tray/menu-bar widget.
+window.recorder.onTrayStart(() => { if (!isRecording) startRecording(); });
+window.recorder.onTrayStop(() => { if (isRecording) stopRecording(); });
 
 (async function init() {
   loadLogo();

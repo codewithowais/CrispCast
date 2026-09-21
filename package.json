@@ -42,6 +42,10 @@
       "styles.css",
       "selftest.html",
       "selftest.js",
+      "assets/icon.png",
+      "assets/trayTemplate.png",
+      "assets/trayTemplate@2x.png",
+      "assets/trayColor.png",
       "!**/*.map"
     ],
     "directories": {

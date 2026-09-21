@@ -15,5 +15,8 @@ contextBridge.exposeInMainWorld('recorder', {
   cleanAndRemux: (opts) => ipcRenderer.invoke('clean-and-remux', opts),
   compressVideo: (opts) => ipcRenderer.invoke('compress-video', opts),
   onRemuxProgress: (cb) => ipcRenderer.on('remux-progress', (_e, pct) => cb(pct)),
+  notifyRecordingState: (state) => ipcRenderer.invoke('recording-state', state),
+  onTrayStart: (cb) => ipcRenderer.on('tray-start', () => cb()),
+  onTrayStop: (cb) => ipcRenderer.on('tray-stop', () => cb()),
   selftestDone: (report) => ipcRenderer.invoke('selftest-done', report)
 });
