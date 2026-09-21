@@ -1,0 +1,48 @@
+name: Release
+
+# Build and publish cross-platform installers to GitHub Releases.
+# Triggers on pushing a version tag (e.g. v1.2.3) or manually via the Actions tab.
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+# electron-builder needs write access to create/update the GitHub Release
+# using the automatically provided GITHUB_TOKEN. No extra secrets required.
+permissions:
+  contents: write
+
+jobs:
+  release:
+    strategy:
+      # Keep building the other OSes even if one fails.
+      fail-fast: false
+      matrix:
+        os: [macos-latest, windows-latest, ubuntu-latest]
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      # `npm install` (not `npm ci`) so ffmpeg-static / ffprobe-static fetch the
+      # correct per-OS binaries on each runner, and to tolerate minor lockfile drift.
+      - name: Install dependencies
+        run: npm install
+
+      # Run electron-builder with no -m/-w/-l flag: each runner builds only its
+      # own OS targets. `--publish always` uploads artifacts to the GitHub Release
+      # for this tag; electron-builder merges all matrix uploads into one release.
+      - name: Build and publish
+        run: npx electron-builder --publish always
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Do not attempt macOS code signing; produce an unsigned build.
+          CSC_IDENTITY_AUTO_DISCOVERY: false
